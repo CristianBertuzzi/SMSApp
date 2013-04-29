@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:orientation="vertical"
+	android:background="@color/grayBlack"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+	   
+    <RelativeLayout 
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        >
+
+        <ImageButton
+            android:id="@+id/selectContattiButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginRight="50dp"
+            android:background="@drawable/select_contatti" />
+
+        <TextView
+            android:id="@+id/selectContactTxt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="18dp"
+            android:layout_toLeftOf="@+id/selectContattiButton"
+            android:text="Seleziona Contatti"
+            android:textColor="@color/white" />
+        
+    </RelativeLayout>
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="171dp"
+            android:layout_marginLeft="15dp"
+            android:layout_weight="0.85"
+            android:inputType="text"
+            android:width="66dp" />
+
+        <Button
+            android:id="@+id/inviaSMSButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="invia" />
+    </LinearLayout> 
+</LinearLayout>
+    
