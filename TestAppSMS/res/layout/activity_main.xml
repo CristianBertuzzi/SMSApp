@@ -20,7 +20,8 @@
             android:layout_alignParentRight="true"
             android:layout_alignParentTop="true"
             android:layout_marginRight="50dp"
-            android:background="@drawable/select_contatti" />
+            android:background="@drawable/select_contatti"
+            android:contentDescription="Pulsante per aggiungere un contatto" />
 
         <TextView
             android:id="@+id/selectContactTxt"
@@ -37,7 +38,8 @@
     <ListView
         android:id="@+id/listaContattiSelezionati"
         android:layout_width="match_parent"
-        android:layout_height="151dp" 
+        android:layout_height="151dp"
+        android:background="@color/grayBlack" 
         >
         
     </ListView>
@@ -50,7 +52,8 @@
         android:orientation="horizontal" >
 
         <EditText
-            android:layout_width="wrap_content"
+        	android:id="@+id/textBoxSMS"
+            android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_marginLeft="15dp"
             android:layout_weight="0.71"

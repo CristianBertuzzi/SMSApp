@@ -19,12 +19,16 @@ public class CustomAdapter extends ArrayAdapter<Contatto>{
     public View getView(int position, View convertView, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) getContext()
              .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        convertView = inflater.inflate(R.layout.rowcustom, null);
-        TextView nome = (TextView)convertView.findViewById(R.id.textViewName);
-        TextView numero = (TextView)convertView.findViewById(R.id.textViewNumber);
+        
+        convertView = inflater.inflate(R.layout.row, null);
+        
+        
+        TextView nome = (TextView)convertView.findViewById(R.id.nomeEnumeroContatto);
+        //TextView numero = (TextView)convertView.findViewById(R.id.textViewNumber);
+        
         Contatto c = getItem(position);
-        nome.setText(c.getNome()+" "+c.getCognome());
-        numero.setText(c.getTelefono());
+        nome.setText(c.getNome()+" - "+c.getTelefono() );
+
         return convertView;
     }
 

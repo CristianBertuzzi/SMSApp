@@ -8,6 +8,7 @@ import android.provider.ContactsContract;
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -20,15 +21,15 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 	
-	private boolean contattiSelezionati=false;
+	private short contattiSelezionati=0;
 	private final int SELECT_CONTACT=1;
 	
-	//private ArrayList <Contatto>arrayListContatti = new ArrayList <Contatto>();
-	private ArrayList <String>arrayListContatti;
+	private ArrayList <Contatto>arrayListContatti;
+	//private ArrayList <String>arrayListContatti;
     private ListView listaContatti ;
-    private ArrayAdapter <String>adapter;
+    //private ArrayAdapter <String>adapter;
     
-    //private CustomAdapter adapter = new CustomAdapter(this, R.layout.rowcustom, arrayListContatti);
+    private CustomAdapter adapter;
 	
 	private OnClickListener inviaSMSClickListener = new OnClickListener() {
 		
@@ -36,7 +37,7 @@ public class MainActivity extends Activity {
 		//dei contatti prima di poter inviare un messaggio
 		@Override
 		public void onClick(View v) {
-			if(contattiSelezionati){
+			if(contattiSelezionati  > 0){
 				showToast("Messagio inviato!");
 			}else{
 				showToast("Errore!Seleziona prima qualche contatto!");
@@ -70,20 +71,20 @@ public class MainActivity extends Activity {
         ImageButton slectContact = (ImageButton)findViewById(R.id.selectContattiButton);  
         slectContact.setOnClickListener	(selectContattiListener);
 
-        
-        arrayListContatti = new ArrayList <String>(); 
+        arrayListContatti = new ArrayList <Contatto>();
+        //arrayListContatti = new ArrayList <String>(); 
         
         listaContatti=(ListView)findViewById(R.id.listaContattiSelezionati);
+        listaContatti.setCacheColorHint(getResources().getColor(R.color.grayBlack));
 
-        //listaContatti.setAdapter(adapter);
+        adapter = new CustomAdapter(this, R.layout.row, arrayListContatti);
 
-        adapter=new ArrayAdapter<String>(
+        /*adapter=new ArrayAdapter<String>(
         									this,
         									R.layout.row,
         									R.id.textViewList,
-        									arrayListContatti);
+        									arrayListContatti);*/
         listaContatti.setAdapter(adapter);
-
     }
     
     
@@ -122,16 +123,14 @@ public class MainActivity extends Activity {
     					Cursor phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,null,ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = "+ id,null, null); 
     					while (phones.moveToNext()) { 
     						String phoneNumber = phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-    						Log.i("Number", phoneNumber);
-    						showToast("Numero contatto selzionato= " + phoneNumber +
-    								"\nnome contatto selezionato= " + name);
+    						Log.d("Number", phoneNumber);
+    						contattiSelezionati++;
     						addContattoToList(  name , phoneNumber);
     					} 
     					phones.close();
 
-    					Log.i("Names", name);
+    					Log.d("Names", name + " " );
     				}
-
     			}
     		}
     	break;
@@ -141,7 +140,8 @@ public class MainActivity extends Activity {
 
 	private void addContattoToList(String name, String phoneNumber) {
         Contatto c = new Contatto(name, "", phoneNumber);
-        arrayListContatti.add(name + "    -  " + phoneNumber);
+        //arrayListContatti.add(name + "    -  " + phoneNumber);
+        arrayListContatti.add(c);
         adapter.notifyDataSetChanged();
 	}
 }
