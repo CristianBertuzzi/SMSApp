@@ -46,6 +46,9 @@ public class MainActivity extends Activity {
 					SmsManager sms = SmsManager.getDefault();
 
 					for(int i=0; i < arrayListContatti.size() ; i++){
+						
+						parsingAndSobstituteSMS(msgField);
+						
 						//sms.sendTextMessage(arrayListContatti.get(i).getTelefono(), null, msgToSend, null, null);
 					}
 
@@ -94,11 +97,11 @@ public class MainActivity extends Activity {
         listaContatti.setCacheColorHint(getResources().getColor(R.color.grayBlack));
 
         adapter = new CustomAdapter(this, R.layout.row, arrayListContatti);
-
-
         listaContatti.setAdapter(adapter);
         
-        //se l'applicazione è stata ripristinata, allora recupero l'ArrayLi
+		//EditText msgField = (EditText)findViewById(R.id.textBoxSMS);
+		
+        //se l'applicazione è stata ripristinata, allora recupero l'ArrayList
         if (savedInstanceState != null){
         	ArrayList<String> arrayNomi = savedInstanceState.getStringArrayList( "arrayNomi" );
         	ArrayList<String> arrayNumeri = savedInstanceState.getStringArrayList( "arrayNumeri" );
@@ -191,6 +194,13 @@ public class MainActivity extends Activity {
 			showToast("Contatto già presente nei contatti slezionati!");
 		}
 	}
+	
+	
+	private String parsingAndSobstituteSMS(EditText msgField) {
+		return null;
+		
+	}
+	
 	
 	//metodo invocato quando per salvare lo stato dell'appllicazione prima che avvenga una rotazione
 	//salvo l'ArrayList dei contatti nel Bundle outState, tramite 2 arraylist

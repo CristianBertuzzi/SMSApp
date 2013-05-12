@@ -58,7 +58,10 @@
             android:layout_marginLeft="15dp"
             android:layout_weight="0.71"
             android:inputType="textMultiLine"
-            android:width="66dp" >
+            android:width="66dp" 
+            android:hint="Messaggio"
+            
+            >
 
             <requestFocus />
         </EditText>
