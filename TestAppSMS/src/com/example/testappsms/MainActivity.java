@@ -1,6 +1,8 @@
 package com.example.testappsms;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -10,23 +12,34 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.telephony.SmsManager;
 import android.util.Log;
-import android.view.Menu;
-import android.view.View;
+import android.view.*;
 import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.Toast;
+import android.widget.*;
+import android.widget.AdapterView.OnItemClickListener;
 
 public class MainActivity extends Activity {
 	
 	private final int SELECT_CONTACT=1;
 	
+	//array di contatti di appoggio per la ListView : è il modello dei dati dove si aggiungono i contatti  
 	private ArrayList <Contatto>arrayListContatti;
+	
+	//ListView di contatti a cui devo INVIARE IL MESSAGGIO
     private ListView listaContatti ;
     
+    //adapter usato per personalizzare le righe della ListView listaContatti
     private CustomAdapter adapter;
+    
+    /*variabili x l'AutoCompleteTextView*/
+    
+    //lista di contatti assoviata all'AutoCompleteTextView
+    private ArrayList<Map<String, String>> mPeopleList;
+
+    //adapter per personalizzare le ricghe dell'AutoCompleteTextView
+    private SimpleAdapter mAdapter;
+    
+    //AutoCompleteTextView usata per inserire un nuovo contatto
+    private AutoCompleteTextView mTxtPhoneNo;
 	
 	private OnClickListener inviaSMSClickListener = new OnClickListener() {
 		
@@ -73,14 +86,12 @@ public class MainActivity extends Activity {
 		public void onClick(View v) {
 			Intent intent = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
 			startActivityForResult(intent, SELECT_CONTACT);
-
 		}
 	};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-    	
         
         setContentView(R.layout.activity_main);
         
@@ -91,6 +102,40 @@ public class MainActivity extends Activity {
         ImageButton slectContact = (ImageButton)findViewById(R.id.selectContattiButton);  
         slectContact.setOnClickListener	(selectContattiListener);
 
+        
+        //per l'autocompletamento nell'inserimento del contatto
+        mPeopleList = new ArrayList<Map<String, String>>();
+        
+        //carico tutta la lista dei contatti nella 
+        addContattiToAutoCompleteTextView();
+        
+        mTxtPhoneNo = (AutoCompleteTextView) findViewById(R.id.autoCompleteTextView1);
+        
+        mAdapter = new SimpleAdapter(this, mPeopleList, R.layout.autocomplete_contact,
+                new String[] { "Nome", "Telefono", "Tipo" }, 
+                new int[] { R.id.ccontName, R.id.ccontNo, R.id.ccontType });
+        
+ 
+        mTxtPhoneNo.setOnItemClickListener(new OnItemClickListener() {
+
+        	@Override
+        	public void onItemClick(AdapterView<?> av, View arg1, int index, long arg3) {
+        		Map<String, String> map = (Map<String, String>) av.getItemAtPosition(index);
+
+        		String name  = map.get("Nome");
+        		String number = map.get("Telefono");
+        		//mTxtPhoneNo.setText(""+name+"  <"+number+">");
+        		mTxtPhoneNo.setText("");
+        		addContattoToList(name,number);
+
+        	}
+
+        });
+        
+        mTxtPhoneNo.setAdapter(mAdapter);
+        //fine autocomplete init
+        
+        
         arrayListContatti = new ArrayList <Contatto>();
         
         listaContatti=(ListView)findViewById(R.id.listaContattiSelezionati);
@@ -113,8 +158,70 @@ public class MainActivity extends Activity {
         	adapter.notifyDataSetChanged();
         }
     }
+ 
     
-    protected void onStart(){
+    //metodo che carica nell'mPeopleList (l'AutoCompleteView )
+    //tutto l'elenco dei contatti
+    private void addContattiToAutoCompleteTextView() {
+    	mPeopleList.clear();
+    	Cursor people = getContentResolver().query(
+    			ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
+    	
+    	//scorro tutto l'elenco dei contatti e lo metto nell'AutoCompleteView
+    	while (people.moveToNext()) {
+    		String contactName = people.getString(people
+    				.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+    		String contactId = people.getString(people
+    				.getColumnIndex(ContactsContract.Contacts._ID));
+    		String hasPhone = people
+    				.getString(people
+    						.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER));
+
+    		if ((Integer.parseInt(hasPhone) > 0)){
+    			
+    			// You know have the number so now query it like this
+    			Cursor phones = getContentResolver().query(
+    					ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+    					null,
+    					ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = "+ contactId,
+    					null, null);
+    			
+    			while (phones.moveToNext()){
+    				
+    				//store numbers and display a dialog letting the user select which.
+    				String phoneNumber = phones.getString(
+    						phones.getColumnIndex(
+    								ContactsContract.CommonDataKinds.Phone.NUMBER));
+    				String numberType = phones.getString(phones.getColumnIndex(
+    						ContactsContract.CommonDataKinds.Phone.TYPE));
+    				
+    				Map<String, String> NamePhoneType = new HashMap<String, String>();
+    				
+    				NamePhoneType.put("Nome", contactName);
+    				NamePhoneType.put("Telefono", phoneNumber);
+    				
+    				if(numberType.equals("0")){
+    					NamePhoneType.put("Tipo", "Work");
+    				}else{
+    					if(numberType.equals("1")){
+    						NamePhoneType.put("Tipo", "Home");
+    					}else if(numberType.equals("2")){
+    						NamePhoneType.put("Tipo",  "Mobile");
+    					}else{
+    						NamePhoneType.put("Tipo", "Other");
+    					}
+    				}
+    				//Then add this map to the list.
+    				mPeopleList.add(NamePhoneType);
+    			}//fine ciclo per scorrere i contatti della rubrica
+    			phones.close();
+    		}//fine if di verifica che il contatto abbia un numero di telefono
+    	}
+    	people.close();
+    	//startManagingCursor(people); se lo decommento da errore
+    }
+
+	protected void onStart(){
         super.onStart();
     }
     
@@ -137,13 +244,14 @@ public class MainActivity extends Activity {
     	super.onActivityResult(reqCode, resultCode, data);
 
     	switch (reqCode) {
+    	
     	case (SELECT_CONTACT) :
-    		
+
     		//se l'intent ha ritornato un risultato valido
     		if (resultCode == Activity.RESULT_OK) {
     			Uri contactData = data.getData();
     			Cursor cur =  managedQuery(contactData, null, null, null, null);
-    			
+
     			if (cur.moveToFirst()) {
     				//recupero il nome e l'ID del contatto
     				String name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
@@ -153,13 +261,13 @@ public class MainActivity extends Activity {
     				{
     					// Query phone here. Covered next
     					Cursor phones = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,null,ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = "+ id,null, null); 
-    					
+
     					//aggiungo tutti i numeri di telefono del contatto all'elenco dei destinatari
     					while (phones.moveToNext()) { 
     						String phoneNumber = phones.getString(phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-    						
+
     						Log.d("Number", phoneNumber);
-    						
+
     						addContattoToList(  name , phoneNumber);
     					} 
     					phones.close();
@@ -168,8 +276,11 @@ public class MainActivity extends Activity {
     				}
     			}
     		}
-    		break;
+
+    	break;
     	}
+    	
+    	Log.d("debug","fine contact view");
     }
 
 
@@ -193,6 +304,8 @@ public class MainActivity extends Activity {
 		}else{
 			showToast("Contatto già presente nei contatti slezionati!");
 		}
+        
+        Log.d("debug", "OOOOLLLLLLL");
 	}
 	
 	
