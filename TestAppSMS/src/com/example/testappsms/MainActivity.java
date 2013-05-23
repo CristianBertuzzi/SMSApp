@@ -8,9 +8,10 @@ import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.database.Cursor;
 import android.telephony.SmsManager;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
@@ -40,7 +41,11 @@ public class MainActivity extends Activity {
     
     //AutoCompleteTextView usata per inserire un nuovo contatto
     private AutoCompleteTextView mTxtPhoneNo;
+    
+    private String smsText;
 	
+    
+    
 	private OnClickListener inviaSMSClickListener = new OnClickListener() {
 		
 		//alla pressione del tasto "invia" verifico di aver selezionato
@@ -58,10 +63,19 @@ public class MainActivity extends Activity {
 
 					SmsManager sms = SmsManager.getDefault();
 
+					boolean parse = smsNeedToParse(msgField);
+						
+					
+					
 					for(int i=0; i < arrayListContatti.size() ; i++){
 						
-						parsingAndSobstituteSMS(msgField);
-						
+
+						if(parse){
+							
+							msgToSend = parsingAndSobstituteSMS(arrayListContatti.get(i).getNome());
+							showToast("TESTO INVIATO: " + msgToSend);
+						}
+						 
 						//sms.sendTextMessage(arrayListContatti.get(i).getTelefono(), null, msgToSend, null, null);
 					}
 
@@ -79,7 +93,7 @@ public class MainActivity extends Activity {
 	};
 
 	//alla pressione del tasto "seleziona contatti" lancia un nuovo
-	//intent per la selzione di un contatto
+	//intent per la selezione di un contatto
 	private OnClickListener selectContattiListener = new OnClickListener(){
 
 		@Override
@@ -89,6 +103,30 @@ public class MainActivity extends Activity {
 		}
 	};
 
+    //ascoltatore per modificare il conto dei caratteri del testo del messaggio
+	TextWatcher listenerCaratteriInseriti = new TextWatcher(){
+    	public void  afterTextChanged (Editable s){ 
+    		
+    		Log.d("seachScreen", "afterTextChanged");
+    		
+    		TextView txtNumCar = (TextView)findViewById(R.id.numCaratteriInseriti);
+
+			txtNumCar.setText(s.length() + "/160");
+    	} 
+    	public void  beforeTextChanged  (CharSequence s, int start, int 
+    			count, int after)
+    	{ 
+    		Log.d("seachScreen", "beforeTextChanged");
+			
+    	} 
+    	public void  onTextChanged  (CharSequence s, int start, int before, 
+    			int count) 
+    	{ 
+    		Log.d("seachScreen", s.toString()); 
+    	}
+    };
+	
+	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,12 +139,17 @@ public class MainActivity extends Activity {
         
         ImageButton slectContact = (ImageButton)findViewById(R.id.selectContattiButton);  
         slectContact.setOnClickListener	(selectContattiListener);
-
+        
+        EditText msgField = (EditText)findViewById(R.id.textBoxSMS);
+        
+        msgField.addTextChangedListener(listenerCaratteriInseriti);
+        
+        this.smsText=null;
         
         //per l'autocompletamento nell'inserimento del contatto
         mPeopleList = new ArrayList<Map<String, String>>();
         
-        //carico tutta la lista dei contatti nella 
+        //carico tutto l'elenco dei contatti nell'ArrayList mPeopleList
         addContattiToAutoCompleteTextView();
         
         mTxtPhoneNo = (AutoCompleteTextView) findViewById(R.id.autoCompleteTextView1);
@@ -133,9 +176,7 @@ public class MainActivity extends Activity {
         });
         
         mTxtPhoneNo.setAdapter(mAdapter);
-        //fine autocomplete init
-        
-        
+
         arrayListContatti = new ArrayList <Contatto>();
         
         listaContatti=(ListView)findViewById(R.id.listaContattiSelezionati);
@@ -156,6 +197,18 @@ public class MainActivity extends Activity {
         	}
         	
         	adapter.notifyDataSetChanged();
+        	
+        	TextView txtNumCar = (TextView)findViewById(R.id.numCaratteriInseriti);
+        	
+        	
+        	String numCar = savedInstanceState.getString("numeroCaratteri");
+        	String txtSMS = savedInstanceState.getString("testoMessaggio" );
+        	
+        	txtNumCar.setText(numCar);
+        	msgField.setText(txtSMS);
+        	
+        	
+        	
         }
     }
  
@@ -218,7 +271,6 @@ public class MainActivity extends Activity {
     		}//fine if di verifica che il contatto abbia un numero di telefono
     	}
     	people.close();
-    	//startManagingCursor(people); se lo decommento da errore
     }
 
 	protected void onStart(){
@@ -243,6 +295,7 @@ public class MainActivity extends Activity {
     public void onActivityResult(int reqCode, int resultCode, Intent data) {
     	super.onActivityResult(reqCode, resultCode, data);
 
+    	//usato per capire quale capire quale activity 
     	switch (reqCode) {
     	
     	case (SELECT_CONTACT) :
@@ -308,25 +361,49 @@ public class MainActivity extends Activity {
         Log.d("debug", "OOOOLLLLLLL");
 	}
 	
+	//metodo che sostituisce tutti i caratteri doppio dollaro($$)
+	//con la stringa nameToWrite
+	private String parsingAndSobstituteSMS(String nameToWrite) {
+		
+		String ris = smsText.replace("$$", nameToWrite);
+		return ris;
+	}
 	
-	private String parsingAndSobstituteSMS(EditText msgField) {
-		return null;
+	
+	private boolean smsNeedToParse(EditText msgField) {
+		
+		boolean ris = false;
+		String msgText = msgField.getText() + "";
+		if(msgText.contains("$$")){
+			ris = true;
+			this.smsText=msgText;
+		}
+		
+		return ris;
 		
 	}
+	
 	
 	
 	//metodo invocato quando per salvare lo stato dell'appllicazione prima che avvenga una rotazione
 	//salvo l'ArrayList dei contatti nel Bundle outState, tramite 2 arraylist
 	@Override
 	public void onSaveInstanceState (Bundle outState){
+		
 		ArrayList<String> arrayNomi = new ArrayList<String>(); 
 		ArrayList<String> arrayNumeri = new ArrayList<String>();
 		
-		for( Contatto c1 : arrayListContatti  ){
+		for( Contatto c1 : arrayListContatti ){
 			arrayNomi.add(c1.getNome());
 			arrayNumeri.add(c1.getTelefono());	
 		}
-
+		
+		EditText msgBox = (EditText)findViewById(R.id.textBoxSMS);
+		TextView numCar = (TextView)findViewById(R.id.numCaratteriInseriti);
+		
+		
+		outState.putString("numeroCaratteri", numCar.getText()+"");
+		outState.putString("testoMessaggio", msgBox.getText()+"" );
 		outState.putStringArrayList("arrayNomi", arrayNomi);
 		outState.putStringArrayList("arrayNumeri", arrayNumeri);
 	}
