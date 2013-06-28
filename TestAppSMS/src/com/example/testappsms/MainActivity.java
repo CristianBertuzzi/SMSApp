@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.provider.ContactsContract.Contacts;
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.telephony.SmsManager;
@@ -38,6 +41,7 @@ public class MainActivity extends Activity {
 
     //adapter per personalizzare le ricghe dell'AutoCompleteTextView
     private SimpleAdapter mAdapter;
+    
     
     //AutoCompleteTextView usata per inserire un nuovo contatto
     private AutoCompleteTextView mTxtPhoneNo;
@@ -103,9 +107,32 @@ public class MainActivity extends Activity {
 		}
 	};
 
+	TextWatcher listenerContattoCercato = new TextWatcher(){
+
+		@Override
+		public void afterTextChanged(Editable s) {
+			
+		}
+
+		@Override
+		public void beforeTextChanged(CharSequence s, int start, int count,int after) {
+
+		}
+
+		@Override
+		public void onTextChanged(CharSequence s, int start, int before, int count) {
+	        //carico i contatti corrispondenti al testo inserito nella textbox nell'ArrayList mPeopleList
+	        addContattiToAutoCompleteTextView(s.toString());
+			
+		}
+		
+	};
+	
+	
     //ascoltatore per modificare il conto dei caratteri del testo del messaggio
 	TextWatcher listenerCaratteriInseriti = new TextWatcher(){
-    	public void  afterTextChanged (Editable s){ 
+    	
+		public void  afterTextChanged (Editable s){ 
     		
     		Log.d("seachScreen", "afterTextChanged");
     		
@@ -113,17 +140,9 @@ public class MainActivity extends Activity {
 
 			txtNumCar.setText(s.length() + "/160");
     	} 
-    	public void  beforeTextChanged  (CharSequence s, int start, int 
-    			count, int after)
-    	{ 
-    		Log.d("seachScreen", "beforeTextChanged");
-			
-    	} 
-    	public void  onTextChanged  (CharSequence s, int start, int before, 
-    			int count) 
-    	{ 
-    		Log.d("seachScreen", s.toString()); 
-    	}
+    	public void  beforeTextChanged  (CharSequence s, int start, int count, int after){} 
+    	
+    	public void  onTextChanged  (CharSequence s, int start, int before, int count){ }
     };
 	
 	
@@ -149,8 +168,7 @@ public class MainActivity extends Activity {
         //per l'autocompletamento nell'inserimento del contatto
         mPeopleList = new ArrayList<Map<String, String>>();
         
-        //carico tutto l'elenco dei contatti nell'ArrayList mPeopleList
-        addContattiToAutoCompleteTextView();
+
         
         mTxtPhoneNo = (AutoCompleteTextView) findViewById(R.id.autoCompleteTextView1);
         
@@ -159,7 +177,7 @@ public class MainActivity extends Activity {
                 new int[] { R.id.ccontName, R.id.ccontNo, R.id.ccontType });
         
  
-        mTxtPhoneNo.setOnItemClickListener(new OnItemClickListener() {
+        mTxtPhoneNo.setOnItemClickListener( new OnItemClickListener() {
 
         	@Override
         	public void onItemClick(AdapterView<?> av, View arg1, int index, long arg3) {
@@ -177,6 +195,9 @@ public class MainActivity extends Activity {
         
         mTxtPhoneNo.setAdapter(mAdapter);
 
+        mTxtPhoneNo.addTextChangedListener(listenerContattoCercato);
+        
+        
         arrayListContatti = new ArrayList <Contatto>();
         
         listaContatti=(ListView)findViewById(R.id.listaContattiSelezionati);
@@ -214,58 +235,91 @@ public class MainActivity extends Activity {
  
     
     //metodo che carica nell'mPeopleList (l'AutoCompleteView )
-    //tutto l'elenco dei contatti
-    private void addContattiToAutoCompleteTextView() {
+    //i contatti che contengono nel nome nomeContatto
+    private void addContattiToAutoCompleteTextView(String nomeContatto) {
+    	
     	mPeopleList.clear();
+    	
+    	//parametro (con il punto di domanda) che si sostituiscono nella query 
+    	String[] mSelectionArgs = {"%" + nomeContatto + "%" };
+    	
+		ContentResolver contentResolver= getContentResolver();
+
+
+    	//campi che si desiderno di un contatto
+    	String[] campiDaPrelevare = {
+    			ContactsContract.Contacts.HAS_PHONE_NUMBER ,
+    			ContactsContract.Contacts._ID ,
+    			ContactsContract.Contacts.DISPLAY_NAME 
+    	};
+    	
+    	
+    	
+		//recupero tutti i contatti presenti nella rubrica, che contengono la 
     	Cursor people = getContentResolver().query(
-    			ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
+    			ContactsContract.Contacts.CONTENT_URI,
+    			campiDaPrelevare, 
+    			ContactsContract.Contacts.DISPLAY_NAME + " LIKE ?", 
+    			mSelectionArgs, 
+    			null);
     	
     	//scorro tutto l'elenco dei contatti e lo metto nell'AutoCompleteView
     	while (people.moveToNext()) {
-    		String contactName = people.getString(people
-    				.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-    		String contactId = people.getString(people
-    				.getColumnIndex(ContactsContract.Contacts._ID));
-    		String hasPhone = people
-    				.getString(people
-    						.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER));
 
-    		if ((Integer.parseInt(hasPhone) > 0)){
+    		//recupero il nome del contatto
+    		String contactName = people.getString(people.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+    		
+    		//recupero l'id del contatto
+    		String contactId = people.getString(people.getColumnIndex(ContactsContract.Contacts._ID));
+    		
+    		//recupero l'intero che indica se il contatto ha il numero di telefono
+    		int hasPhone = Integer.parseInt( people.getString(people.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)) ) ;
+
+    		
+    		
+    		if ( hasPhone > 0){
     			
-    			// You know have the number so now query it like this
-    			Cursor phones = getContentResolver().query(
+    			// ora so che il contatto presenta il numero telefonico
+    			Cursor phones = contentResolver.query(
     					ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
     					null,
-    					ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = "+ contactId,
-    					null, null);
+    					ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " =?",
+    					new String[]{ contactId }, // parametro della query che viene sostituito al ?(punto di domanda)
+    					null);
     			
     			while (phones.moveToNext()){
     				
+    				int indiceColonnaTelefono = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+    				int indiceColonnaTipoContatto = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE);
+    				
     				//store numbers and display a dialog letting the user select which.
-    				String phoneNumber = phones.getString(
-    						phones.getColumnIndex(
-    								ContactsContract.CommonDataKinds.Phone.NUMBER));
-    				String numberType = phones.getString(phones.getColumnIndex(
-    						ContactsContract.CommonDataKinds.Phone.TYPE));
+    				String phoneNumber = phones.getString(indiceColonnaTelefono);
+    				String numberType = phones.getString(indiceColonnaTipoContatto);
     				
-    				Map<String, String> NamePhoneType = new HashMap<String, String>();
+    				Map<String, String> namePhoneType = new HashMap<String, String>();
     				
-    				NamePhoneType.put("Nome", contactName);
-    				NamePhoneType.put("Telefono", phoneNumber);
+    				namePhoneType.put("Nome", contactName);
+    				namePhoneType.put("Telefono", phoneNumber);
     				
     				if(numberType.equals("0")){
-    					NamePhoneType.put("Tipo", "Work");
+    					namePhoneType.put("Tipo", "Work");
     				}else{
     					if(numberType.equals("1")){
-    						NamePhoneType.put("Tipo", "Home");
+    						
+    						namePhoneType.put("Tipo", "Home");
+    						
     					}else if(numberType.equals("2")){
-    						NamePhoneType.put("Tipo",  "Mobile");
+    						
+    						namePhoneType.put("Tipo",  "Mobile");
+    						
     					}else{
-    						NamePhoneType.put("Tipo", "Other");
+    						
+    						namePhoneType.put("Tipo", "Other");
+    						
     					}
     				}
     				//Then add this map to the list.
-    				mPeopleList.add(NamePhoneType);
+    				mPeopleList.add(namePhoneType);
     			}//fine ciclo per scorrere i contatti della rubrica
     			phones.close();
     		}//fine if di verifica che il contatto abbia un numero di telefono

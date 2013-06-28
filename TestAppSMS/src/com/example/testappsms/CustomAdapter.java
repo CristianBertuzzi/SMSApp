@@ -33,7 +33,7 @@ public class CustomAdapter extends ArrayAdapter<Contatto>{
         
         //aggiungo l'ascoltatore al pulsate per rimuovere il contatto nella posizione position
         listenerRemoveContatto = new MyClickListerRemoveContatto(arrayListContatti, this, position); 
-        removeButton.setOnClickListener(listenerRemoveContatto );
+        removeButton.setOnClickListener( listenerRemoveContatto );
         
         TextView nome = (TextView)convertView.findViewById(R.id.nomeEnumeroContatto);
         
