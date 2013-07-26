@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
 import android.app.Activity;
 import android.content.ContentResolver;
@@ -36,7 +37,7 @@ public class MainActivity extends Activity {
     
     /*variabili x l'AutoCompleteTextView*/
     
-    //lista di contatti assoviata all'AutoCompleteTextView
+    //lista di contatti associata all'AutoCompleteTextView
     private ArrayList<Map<String, String>> mPeopleList;
 
     //adapter per personalizzare le ricghe dell'AutoCompleteTextView
@@ -107,27 +108,7 @@ public class MainActivity extends Activity {
 		}
 	};
 
-	TextWatcher listenerContattoCercato = new TextWatcher(){
 
-		@Override
-		public void afterTextChanged(Editable s) {
-			
-		}
-
-		@Override
-		public void beforeTextChanged(CharSequence s, int start, int count,int after) {
-
-		}
-
-		@Override
-		public void onTextChanged(CharSequence s, int start, int before, int count) {
-	        //carico i contatti corrispondenti al testo inserito nella textbox nell'ArrayList mPeopleList
-	        addContattiToAutoCompleteTextView(s.toString());
-			
-		}
-		
-	};
-	
 	
     //ascoltatore per modificare il conto dei caratteri del testo del messaggio
 	TextWatcher listenerCaratteriInseriti = new TextWatcher(){
@@ -149,6 +130,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+
+        
         
         setContentView(R.layout.activity_main);
         
@@ -193,10 +177,7 @@ public class MainActivity extends Activity {
 
         });
         
-        mTxtPhoneNo.setAdapter(mAdapter);
-
-        mTxtPhoneNo.addTextChangedListener(listenerContattoCercato);
-        
+        mTxtPhoneNo.setAdapter(mAdapter);        
         
         arrayListContatti = new ArrayList <Contatto>();
         
@@ -208,6 +189,10 @@ public class MainActivity extends Activity {
         
 		//EditText msgField = (EditText)findViewById(R.id.textBoxSMS);
 		
+        //carica i contatti nel vettore per l'autocompletamento
+    	TaskToLoadContatti asyncTask = new TaskToLoadContatti(mPeopleList , this);
+		asyncTask.execute();
+        
         //se l'applicazione è stata ripristinata, allora recupero l'ArrayList
         if (savedInstanceState != null){
         	ArrayList<String> arrayNomi = savedInstanceState.getStringArrayList( "arrayNomi" );
@@ -234,100 +219,10 @@ public class MainActivity extends Activity {
     }
  
     
-    //metodo che carica nell'mPeopleList (l'AutoCompleteView )
-    //i contatti che contengono nel nome nomeContatto
-    private void addContattiToAutoCompleteTextView(String nomeContatto) {
-    	
-    	mPeopleList.clear();
-    	
-    	//parametro (con il punto di domanda) che si sostituiscono nella query 
-    	String[] mSelectionArgs = {"%" + nomeContatto + "%" };
-    	
-		ContentResolver contentResolver= getContentResolver();
-
-
-    	//campi che si desiderno di un contatto
-    	String[] campiDaPrelevare = {
-    			ContactsContract.Contacts.HAS_PHONE_NUMBER ,
-    			ContactsContract.Contacts._ID ,
-    			ContactsContract.Contacts.DISPLAY_NAME 
-    	};
-    	
-    	
-    	
-		//recupero tutti i contatti presenti nella rubrica, che contengono la 
-    	Cursor people = getContentResolver().query(
-    			ContactsContract.Contacts.CONTENT_URI,
-    			campiDaPrelevare, 
-    			ContactsContract.Contacts.DISPLAY_NAME + " LIKE ?", 
-    			mSelectionArgs, 
-    			null);
-    	
-    	//scorro tutto l'elenco dei contatti e lo metto nell'AutoCompleteView
-    	while (people.moveToNext()) {
-
-    		//recupero il nome del contatto
-    		String contactName = people.getString(people.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-    		
-    		//recupero l'id del contatto
-    		String contactId = people.getString(people.getColumnIndex(ContactsContract.Contacts._ID));
-    		
-    		//recupero l'intero che indica se il contatto ha il numero di telefono
-    		int hasPhone = Integer.parseInt( people.getString(people.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)) ) ;
-
-    		
-    		
-    		if ( hasPhone > 0){
-    			
-    			// ora so che il contatto presenta il numero telefonico
-    			Cursor phones = contentResolver.query(
-    					ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-    					null,
-    					ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " =?",
-    					new String[]{ contactId }, // parametro della query che viene sostituito al ?(punto di domanda)
-    					null);
-    			
-    			while (phones.moveToNext()){
-    				
-    				int indiceColonnaTelefono = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
-    				int indiceColonnaTipoContatto = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE);
-    				
-    				//store numbers and display a dialog letting the user select which.
-    				String phoneNumber = phones.getString(indiceColonnaTelefono);
-    				String numberType = phones.getString(indiceColonnaTipoContatto);
-    				
-    				Map<String, String> namePhoneType = new HashMap<String, String>();
-    				
-    				namePhoneType.put("Nome", contactName);
-    				namePhoneType.put("Telefono", phoneNumber);
-    				
-    				if(numberType.equals("0")){
-    					namePhoneType.put("Tipo", "Work");
-    				}else{
-    					if(numberType.equals("1")){
-    						
-    						namePhoneType.put("Tipo", "Home");
-    						
-    					}else if(numberType.equals("2")){
-    						
-    						namePhoneType.put("Tipo",  "Mobile");
-    						
-    					}else{
-    						
-    						namePhoneType.put("Tipo", "Other");
-    						
-    					}
-    				}
-    				//Then add this map to the list.
-    				mPeopleList.add(namePhoneType);
-    			}//fine ciclo per scorrere i contatti della rubrica
-    			phones.close();
-    		}//fine if di verifica che il contatto abbia un numero di telefono
-    	}
-    	people.close();
-    }
+  
 
 	protected void onStart(){
+		
         super.onStart();
     }
     
