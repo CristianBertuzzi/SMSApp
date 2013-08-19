@@ -9,15 +9,18 @@ import android.database.Cursor;
 import android.os.AsyncTask;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
+import android.widget.AutoCompleteTextView;
 
 public class TaskToLoadContatti extends AsyncTask< Void, Void, ArrayList<Map<String, String>>> {
 
 	private MainActivity mainActivity;
 	private ArrayList<Map<String, String>> mPeopleList;
+	private AutoCompleteTextView searchContact;
 	
-	public TaskToLoadContatti(ArrayList<Map<String, String>> mPeopleList,MainActivity mainActivity){
+	public TaskToLoadContatti(ArrayList<Map<String, String>> mPeopleList,MainActivity mainActivity, AutoCompleteTextView searchContact){
 		this.mainActivity = mainActivity;
 		this.mPeopleList = mPeopleList;
+		this.searchContact = searchContact;
 	}
 	
 	//metodo che carica nell'mPeopleList (l'AutoCompleteView )
@@ -135,7 +138,8 @@ public class TaskToLoadContatti extends AsyncTask< Void, Void, ArrayList<Map<Str
     	for(Map<String, String> contatto  : nuovaListaAuto){
         	mPeopleList.add(contatto);
         }
+    	
+        //Abilito la ricerca di contatti quando ho caricato tutti i contatti
+    	searchContact.setFocusableInTouchMode(true);
     }
-
-	
 }

@@ -1,16 +1,11 @@
 package com.example.testappsms;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.provider.ContactsContract.Contacts;
 import android.app.Activity;
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.telephony.SmsManager;
@@ -49,7 +44,20 @@ public class MainActivity extends Activity {
     
     private String smsText;
 	
+    private MainActivity activity = this;
     
+    //usato per sapere che bottone è stato premuto nelle finestre di dialogo
+    private boolean rispostaDialog = true;
+    
+    //se il messagio occupa più di 160 caratteri vine diviso e messo qua
+    private String[] pezziMsg;
+    
+	private int numSMSInviati;
+	
+	private ArrayList<String[]> vetMsgToSend;
+	
+	private SmsManager smsMan; 
+	
     
 	private OnClickListener inviaSMSClickListener = new OnClickListener() {
 		
@@ -57,37 +65,62 @@ public class MainActivity extends Activity {
 		//dei contatti prima di poter inviare un messaggio
 		@Override
 		public void onClick(View v) {
-			
 			//invio un messagio a tutti i destinatari
 			if(arrayListContatti.size()  > 0){
 				
 				EditText msgField = (EditText)findViewById(R.id.textBoxSMS);
-				String msgToSend = msgField.getText().toString();
+				String msgToSend = msgField.getText().toString();				
+				
+				numSMSInviati=0;
 				
 				if(!msgToSend.isEmpty()){
 
-					SmsManager sms = SmsManager.getDefault();
+					smsMan = SmsManager.getDefault();
 
 					boolean parse = smsNeedToParse(msgField);
 						
-					
-					
+					vetMsgToSend = new ArrayList<String[]>();
+					//con questo ciclo faccio il parse e creo i messaggi da inviare a
+					//ciascun contatto selezionato
 					for(int i=0; i < arrayListContatti.size() ; i++){
 						
-
 						if(parse){
 							
 							msgToSend = parsingAndSobstituteSMS(arrayListContatti.get(i).getNome());
-							showToast("TESTO INVIATO: " + msgToSend);
+							Log.d("TESTO INVIATO: " , msgToSend );
 						}
-						 
-						//sms.sendTextMessage(arrayListContatti.get(i).getTelefono(), null, msgToSend, null, null);
-					}
+						//aggiungo il messaggio al vettore : 
+						//ogni elemento verrà poi splittato se neccessario
+						
+						vetMsgToSend.add(new String[]{msgToSend});
+						
+					}	
+					
+					for(int i=0; i < vetMsgToSend.size(); i++){
+					
+						pezziMsg = splitStringNChar( msgToSend , 160 );
+						
+						vetMsgToSend.set(i,pezziMsg);
+						
+						//se il messaggio è diviso in più pezzi chiedo all'utente se vuole inviarlo lo stesso
+						if(pezziMsg.length > 1){
+							
+							MyDialog m1 = new MyDialog( "Messaggio per "+arrayListContatti.get(i).getNome()+ " lungo!","Inviare "+ pezziMsg.length +" messaggi?" ,activity,i );
 
-					showToast("Messagio inviato!");
+							m1.showDialog();
+							
+							//MyDialog richiama il metodo setDialogResponse per impstare la risposta e inviare il messagio splittato se l'utente lo vuole
+						
+						//se il messaggio non è stato splittato lo invio così com'è	
+						}else{
+							
+							smsMan.sendTextMessage(arrayListContatti.get(i).getTelefono(), null, pezziMsg[0], null, null);
+
+						}
+					}//fine ciclo per vedere se devo splittare i messaggi
 					
 				}else{
-					showToast("Messagio vuoto!");	
+					showToast("Messaggio vuoto!");	
 				}
 					
 			}else{
@@ -125,14 +158,13 @@ public class MainActivity extends Activity {
     	
     	public void  onTextChanged  (CharSequence s, int start, int before, int count){ }
     };
+
+	
 	
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-
-        
         
         setContentView(R.layout.activity_main);
         
@@ -155,6 +187,8 @@ public class MainActivity extends Activity {
 
         
         mTxtPhoneNo = (AutoCompleteTextView) findViewById(R.id.autoCompleteTextView1);
+        //disabilito la ricerca di contatti finchè non ho caricato tutti i contatti
+        mTxtPhoneNo.setFocusable(false);
         
         mAdapter = new SimpleAdapter(this, mPeopleList, R.layout.autocomplete_contact,
                 new String[] { "Nome", "Telefono", "Tipo" }, 
@@ -165,7 +199,8 @@ public class MainActivity extends Activity {
 
         	@Override
         	public void onItemClick(AdapterView<?> av, View arg1, int index, long arg3) {
-        		Map<String, String> map = (Map<String, String>) av.getItemAtPosition(index);
+        		@SuppressWarnings("unchecked")
+				Map<String, String> map = (Map<String, String>) av.getItemAtPosition(index);
 
         		String name  = map.get("Nome");
         		String number = map.get("Telefono");
@@ -187,10 +222,9 @@ public class MainActivity extends Activity {
         adapter = new CustomAdapter(this, R.layout.row, arrayListContatti);
         listaContatti.setAdapter(adapter);
         
-		//EditText msgField = (EditText)findViewById(R.id.textBoxSMS);
 		
         //carica i contatti nel vettore per l'autocompletamento
-    	TaskToLoadContatti asyncTask = new TaskToLoadContatti(mPeopleList , this);
+    	TaskToLoadContatti asyncTask = new TaskToLoadContatti(mPeopleList , this, mTxtPhoneNo);
 		asyncTask.execute();
         
         //se l'applicazione è stata ripristinata, allora recupero l'ArrayList
@@ -212,14 +246,10 @@ public class MainActivity extends Activity {
         	
         	txtNumCar.setText(numCar);
         	msgField.setText(txtSMS);
-        	
-        	
+
         	
         }
     }
- 
-    
-  
 
 	protected void onStart(){
 		
@@ -331,7 +361,22 @@ public class MainActivity extends Activity {
 		return ris;
 		
 	}
-	
+
+	public String[] splitStringNChar( String stringToSplit, int interval) {
+
+		int arrayLength = (int) Math.ceil(((stringToSplit.length() / (double)interval)));
+		String[] result = new String[arrayLength];
+
+		int j = 0;
+		int lastIndex = result.length - 1;
+		for (int i = 0; i < lastIndex; i++) {
+			result[i] = stringToSplit.substring(j, j + interval);
+			j += interval;
+		} //Add the last bit
+		result[lastIndex] = stringToSplit.substring(j);
+
+		return result;
+	}
 	
 	
 	//metodo invocato quando per salvare lo stato dell'appllicazione prima che avvenga una rotazione
@@ -356,4 +401,32 @@ public class MainActivity extends Activity {
 		outState.putStringArrayList("arrayNomi", arrayNomi);
 		outState.putStringArrayList("arrayNumeri", arrayNumeri);
 	}
+
+
+
+	/**
+	 * Metodo invocato dal dialog in caso si voglia spedire l'sms in più parti
+	 * @param b
+	 * @param indiceContatto
+	 */
+	public void setDialogResponse(boolean b, int indiceContatto) {
+		
+		this.rispostaDialog=b;
+		
+		Log.d( "smstag", "rispostaDialog = " + rispostaDialog);
+		
+		//se è true allora l'utente vuole inviare il messaggio 
+		//diviso in più sms	
+		if(rispostaDialog == true){
+			
+			String[] piecesSMS = vetMsgToSend.get(indiceContatto);
+			for(int j=0; j < piecesSMS.length ; j++){
+				smsMan.sendTextMessage(arrayListContatti.get(indiceContatto).getTelefono(), null, piecesSMS[j], null, null);
+				numSMSInviati++;
+			}
+			
+			showToast("Inviato/i "+numSMSInviati + " SMS");
+		}
+	}
+	
 }
