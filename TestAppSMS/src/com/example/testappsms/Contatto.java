@@ -1,5 +1,10 @@
 package com.example.testappsms;
 
+/**
+ * 
+ * Classe che viene usata per memorizzare i dati di un contatto della rubrica
+ *
+ */
 public class Contatto {
 
     private String nome;

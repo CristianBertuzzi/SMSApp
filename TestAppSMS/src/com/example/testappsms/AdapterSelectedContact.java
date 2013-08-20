@@ -11,17 +11,35 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-public class CustomAdapter extends ArrayAdapter<Contatto>{
+/**
+ * Adapter usato per inserire i dati di un contatto (che viene selezionato)
+ * nella riga della lista di contatti aggiunti il cui layout è stabilito 
+ * nel file row.xml
+ *
+ */
+
+public class AdapterSelectedContact extends ArrayAdapter<Contatto>{
  
+	//pulsante per rimuover il contatto dalla lista
 	private ImageButton removeButton;
+	
+	//ascoltatore che viene aggiunto per rimuovere il contatto dalla lista
 	private MyClickListerRemoveContatto listenerRemoveContatto;
+	
+	//lista dei contatti destinatari del messaggio
 	private ArrayList<Contatto> arrayListContatti;
 	
-    public CustomAdapter(Context context, int textViewResourceId,List<Contatto> objects) {
+    public AdapterSelectedContact(Context context, int textViewResourceId,List<Contatto> objects) {
         super(context, textViewResourceId, objects);
         this.arrayListContatti = (ArrayList<Contatto>) objects;
     }
+    
 
+    /**
+     * Metodo che viene richiamato in automatico quando si scrolla la listView
+     * o quando viene aggiunto un contatto alla lista dei destinatari del messaggio
+     * 
+     */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) getContext()

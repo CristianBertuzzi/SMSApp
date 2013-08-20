@@ -11,10 +11,19 @@ import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.widget.AutoCompleteTextView;
 
+/**
+ * Thread asincrono che server per caricare tutta la rubrica di contatti nella lista per
+ * l'autocompletamento, in background.
+ * Esso viene lanciato all'avvio dell'activity.
+ * Riceve come paramentro la Map, mPeopleList, in cui l'autocomplete cerca la parola inserita.
+ */
 public class TaskToLoadContatti extends AsyncTask< Void, Void, ArrayList<Map<String, String>>> {
 
 	private MainActivity mainActivity;
 	private ArrayList<Map<String, String>> mPeopleList;
+	
+	//serve solamente per disabilitarne l'utilizzo finchè non è stato riempito
+	//mPeopleList da
 	private AutoCompleteTextView searchContact;
 	
 	public TaskToLoadContatti(ArrayList<Map<String, String>> mPeopleList,MainActivity mainActivity, AutoCompleteTextView searchContact){
@@ -135,6 +144,7 @@ public class TaskToLoadContatti extends AsyncTask< Void, Void, ArrayList<Map<Str
     protected void onPostExecute(ArrayList<Map<String, String>> nuovaListaAuto) {
         mPeopleList.clear();
     	
+        //aggiungo i contatti alla lista per l'autompletamento
     	for(Map<String, String> contatto  : nuovaListaAuto){
         	mPeopleList.add(contatto);
         }

@@ -17,8 +17,13 @@ import android.view.View.OnClickListener;
 import android.widget.*;
 import android.widget.AdapterView.OnItemClickListener;
 
+/**
+ * Activity principale di partenza dell'applicazione. 
+ *
+ */
 public class MainActivity extends Activity {
 	
+	//costante usata per richiamare l'intent dei contatti
 	private final int SELECT_CONTACT=1;
 	
 	//array di contatti di appoggio per la ListView : è il modello dei dati dove si aggiungono i contatti  
@@ -28,7 +33,7 @@ public class MainActivity extends Activity {
     private ListView listaContatti ;
     
     //adapter usato per personalizzare le righe della ListView listaContatti
-    private CustomAdapter adapter;
+    private AdapterSelectedContact adapter;
     
     /*variabili x l'AutoCompleteTextView*/
     
@@ -44,6 +49,7 @@ public class MainActivity extends Activity {
     
     private String smsText;
 	
+    //riferimento
     private MainActivity activity = this;
     
     //usato per sapere che bottone è stato premuto nelle finestre di dialogo
@@ -52,13 +58,19 @@ public class MainActivity extends Activity {
     //se il messagio occupa più di 160 caratteri vine diviso e messo qua
     private String[] pezziMsg;
     
+    //tiene il conto di quanti sms si inviano in totale
 	private int numSMSInviati;
 	
+	//vettore che contiene il messaggio splittato nel caso sia più lungo di 160 caratteri
 	private ArrayList<String[]> vetMsgToSend;
 	
+	//per gestire l'invio di un sms
 	private SmsManager smsMan; 
 	
-    
+    //ascoltatore richiamato quando si invia un messaggio
+	//si occupa di inviarlo a tutti i contatti selezionati ,
+	//sostituendo $$ con il nome del destinatario e dividendo il 
+	//messaggio in più sms se risulta più lungo di 160 caratteri
 	private OnClickListener inviaSMSClickListener = new OnClickListener() {
 		
 		//alla pressione del tasto "invia" verifico di aver selezionato
@@ -73,13 +85,16 @@ public class MainActivity extends Activity {
 				
 				numSMSInviati=0;
 				
+				//se non èvuoto procedo
 				if(!msgToSend.isEmpty()){
 
 					smsMan = SmsManager.getDefault();
 
+					//se il messaggio contiene $$ allora faccio il parse
 					boolean parse = smsNeedToParse(msgField);
 						
 					vetMsgToSend = new ArrayList<String[]>();
+					
 					//con questo ciclo faccio il parse e creo i messaggi da inviare a
 					//ciascun contatto selezionato
 					for(int i=0; i < arrayListContatti.size() ; i++){
@@ -96,6 +111,7 @@ public class MainActivity extends Activity {
 						
 					}	
 					
+					//ciclo che invia il messggio a tutti i contatti selezionati
 					for(int i=0; i < vetMsgToSend.size(); i++){
 					
 						pezziMsg = splitStringNChar( msgToSend , 160 );
@@ -161,7 +177,7 @@ public class MainActivity extends Activity {
 
 	
 	
-	
+	//nel metodo onCreate inizializzo la grafica e 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -185,8 +201,9 @@ public class MainActivity extends Activity {
         mPeopleList = new ArrayList<Map<String, String>>();
         
 
-        
+        //coollegol'autocompletetextview dall'xml
         mTxtPhoneNo = (AutoCompleteTextView) findViewById(R.id.autoCompleteTextView1);
+        
         //disabilito la ricerca di contatti finchè non ho caricato tutti i contatti
         mTxtPhoneNo.setFocusable(false);
         
@@ -195,6 +212,9 @@ public class MainActivity extends Activity {
                 new int[] { R.id.ccontName, R.id.ccontNo, R.id.ccontType });
         
  
+        //imposto l'ascoltatore alla lista di autocompletamento, in modo
+        //che quando si prema su un contatto suggerito esso venga aggiunto 
+        //alla lista dei contatti selezionati
         mTxtPhoneNo.setOnItemClickListener( new OnItemClickListener() {
 
         	@Override
@@ -204,7 +224,6 @@ public class MainActivity extends Activity {
 
         		String name  = map.get("Nome");
         		String number = map.get("Telefono");
-        		//mTxtPhoneNo.setText(""+name+"  <"+number+">");
         		mTxtPhoneNo.setText("");
         		addContattoToList(name,number);
 
@@ -212,6 +231,8 @@ public class MainActivity extends Activity {
 
         });
         
+        //aggiungol'adapter per poter utiloizzare un xml personalizzatoper gli elementi 
+        //della listView
         mTxtPhoneNo.setAdapter(mAdapter);        
         
         arrayListContatti = new ArrayList <Contatto>();
@@ -219,7 +240,7 @@ public class MainActivity extends Activity {
         listaContatti=(ListView)findViewById(R.id.listaContattiSelezionati);
         listaContatti.setCacheColorHint(getResources().getColor(R.color.grayBlack));
 
-        adapter = new CustomAdapter(this, R.layout.row, arrayListContatti);
+        adapter = new AdapterSelectedContact(this, R.layout.row, arrayListContatti);
         listaContatti.setAdapter(adapter);
         
 		
@@ -227,7 +248,8 @@ public class MainActivity extends Activity {
     	TaskToLoadContatti asyncTask = new TaskToLoadContatti(mPeopleList , this, mTxtPhoneNo);
 		asyncTask.execute();
         
-        //se l'applicazione è stata ripristinata, allora recupero l'ArrayList
+        //se l'applicazione è stata ripristinata(ruotata in qualche senso), 
+		//allora recupero l'ArrayList dei contatti selezionati e ridisegno la grafica
         if (savedInstanceState != null){
         	ArrayList<String> arrayNomi = savedInstanceState.getStringArrayList( "arrayNomi" );
         	ArrayList<String> arrayNumeri = savedInstanceState.getStringArrayList( "arrayNumeri" );
@@ -256,11 +278,13 @@ public class MainActivity extends Activity {
         super.onStart();
     }
     
+	//metodo usato per visualizzare un avviso di testo a schermo, in basso
     private void showToast(String testo){
 		Toast toast=Toast.makeText(getApplicationContext(),testo,Toast.LENGTH_SHORT);
 		toast.show();
 	}
     
+    //metodo NON USATO, eliminabile
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -316,7 +340,8 @@ public class MainActivity extends Activity {
     }
 
 
-    //se non ègià presente aggiungo un contatto alla all'ArrayList di contatti
+    //metodo che se non è già presente aggiungo un contatto alla all'ArrayList di contatti
+    //name è il nome del contatto e phoneNumber il suo numero
 	private void addContattoToList(String name, String phoneNumber) {
         
         boolean trovato=false;
@@ -348,7 +373,8 @@ public class MainActivity extends Activity {
 		return ris;
 	}
 	
-	
+	//verifiche se il messaggio contiene i caratteri $$, ovvero se devo
+	//sostituirci il nome del destinatario
 	private boolean smsNeedToParse(EditText msgField) {
 		
 		boolean ris = false;
@@ -362,6 +388,8 @@ public class MainActivity extends Activity {
 		
 	}
 
+	//metodo che splitta una stringa stringToSplit se più lunga  di 
+	//intervall caratteri e ritorna il vettore di stringhe in cui è stata divisa
 	public String[] splitStringNChar( String stringToSplit, int interval) {
 
 		int arrayLength = (int) Math.ceil(((stringToSplit.length() / (double)interval)));
